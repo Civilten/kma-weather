@@ -14,9 +14,9 @@ st.set_page_config(page_title="기상청 기상상태 분석", layout="wide")
 hide_streamlit_style = """
 <style>
 #MainMenu {visibility: hidden;}
-header {visibility: hidden;}
-footer {visibility: hidden;}
 .stAppDeployButton {display:none;}
+footer {visibility: hidden;}
+[data-testid="stStatusWidget"] {visibility: hidden;}
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
