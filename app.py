@@ -10,24 +10,20 @@ import plotly.graph_objects as go
 # Page Config
 st.set_page_config(page_title="기상청 기상상태 분석", layout="wide")
 
-# Constants - Default/Fallback
-DEFAULT_API_KEY = "fFr5k0SuRyia-ZNErlcoHA" 
+# Hide default Streamlit style
+hide_streamlit_style = """
+<style>
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+.stAppDeployButton {display:none;}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # --- API Key Management ---
 def get_api_key():
-    if 'model_api_key' not in st.session_state:
-        if os.path.exists("api_key.txt"):
-            with open("api_key.txt", "r") as f:
-                st.session_state['model_api_key'] = f.read().strip()
-        else:
-            st.session_state['model_api_key'] = DEFAULT_API_KEY
-    return st.session_state['model_api_key']
-
-def save_api_key(new_key):
-    st.session_state['model_api_key'] = new_key
-    with open("api_key.txt", "w") as f:
-        f.write(new_key)
-    st.toast("API Key가 저장되었습니다!", icon="✅")
+    return st.session_state.get('api_key', 'fFr5k0SuRyia-ZNErlcoHA')
 
 # Variable Mapping (Updated for Monthly APIs)
 VAR_MAPPING = {
@@ -70,6 +66,8 @@ def go_to_selection():
     st.session_state['raw_monthly_df'] = None 
     st.session_state['fetched_start_val'] = None
     st.session_state['fetched_end_val'] = None
+    st.session_state['region_sel'] = []
+    st.session_state['station_sel'] = []
 
 def on_region_change():
     curr = st.session_state.get('region_sel', [])
@@ -218,10 +216,19 @@ def render_selection_screen():
     with st.sidebar:
         st.header("🔑 설정")
         current_key = get_api_key()
-        new_key = st.text_input("API Key 입력", value=current_key, type="password")
-        if st.button("키 저장"):
-            save_api_key(new_key)
-            st.rerun()
+        new_key = st.text_input("API Key 입력", value=current_key, type="password", help="기상청 API key 신청  https://apihub.kma.go.kr/")
+        st.session_state['api_key'] = new_key
+            
+        # Add Footer Info
+        st.sidebar.markdown('---')
+        st.sidebar.markdown(
+            """
+            **제작자**: 김찬영  
+            **Mail**: chykim1@gmail.com  
+            **Ver**: 1.0  
+            **Latest update**: 2026-02-20
+            """
+        )
             
     api_key = get_api_key()
 
@@ -246,7 +253,7 @@ def render_selection_screen():
     region_options = ['전체 (모든 지역)'] + all_regions
     
     if 'region_sel' not in st.session_state:
-        st.session_state['region_sel'] = ['전체 (모든 지역)']
+        st.session_state['region_sel'] = []
         
     selected_regions_raw = st.multiselect(
         "지역", 
@@ -279,7 +286,7 @@ def render_selection_screen():
         # Keep only valid ones
         st.session_state['station_sel'] = [x for x in st.session_state['station_sel'] if x in valid_station_options]
     else:
-        st.session_state['station_sel'] = ['전체 (모든 관측소)']
+        st.session_state['station_sel'] = []
     
     selected_labels = st.multiselect(
         "관측소", 
@@ -489,6 +496,17 @@ def render_result_screen():
         if st.button("← 첫 화면으로 돌아가기", type="secondary", use_container_width=True):
             go_to_selection()
             st.rerun()
+            
+        # Add Footer Info
+        st.sidebar.markdown('---')
+        st.sidebar.markdown(
+            """
+            **제작자**: 김찬영  
+            **Mail**: chykim1@gmail.com  
+            **Ver**: 1.0  
+            **Latest update**: 2026-02-20
+            """
+        )
 
     raw_df_full = st.session_state.get('raw_monthly_df')
     
@@ -723,4 +741,3 @@ if st.session_state['page'] == 'selection':
     render_selection_screen()
 elif st.session_state['page'] == 'result':
     render_result_screen()
-
