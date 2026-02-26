@@ -252,7 +252,7 @@ def render_selection_screen():
             **제작자**: 김찬영  
             **Mail**: chykim1@gmail.com  
             **Ver**: 1.0.1  
-            **Latest update**: 2026-02-20
+            **Latest update**: 2026-02-26
             """
         )
             
@@ -809,3 +809,4 @@ if st.session_state['page'] == 'selection':
     render_selection_screen()
 elif st.session_state['page'] == 'result':
     render_result_screen()
+
