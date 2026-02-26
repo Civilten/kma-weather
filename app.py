@@ -233,6 +233,18 @@ def fetch_date_range(start_val, end_val, selected_ids, api_key, progress_bar=Non
     return pd.DataFrame()
 
 
+# --- UI Components ---
+def render_sidebar_footer():
+    st.sidebar.markdown('---')
+    st.sidebar.markdown(
+        """
+        **제작자**: 김찬영  
+        **Mail**: chykim1@gmail.com  
+        **Ver**: 1.0.1  
+        **Latest update**: 2026-02-26
+        """
+    )
+
 # --- UI: Selection Screen ---
 def render_selection_screen():
     st.title("📅 기상청 기상상태 (월자료 기반) 분석")
@@ -245,16 +257,7 @@ def render_selection_screen():
         new_key = st.text_input("API Key 입력", value=current_key, type="password", help="기상청 API key 신청  https://apihub.kma.go.kr/")
         st.session_state['api_key'] = new_key
             
-        # Add Footer Info
-        st.sidebar.markdown('---')
-        st.sidebar.markdown(
-            """
-            **제작자**: 김찬영  
-            **Mail**: chykim1@gmail.com  
-            **Ver**: 1.0.1  
-            **Latest update**: 2026-02-26
-            """
-        )
+        render_sidebar_footer()
             
     api_key = get_api_key()
 
@@ -524,15 +527,7 @@ def render_result_screen():
             st.rerun()
             
         # Add Footer Info
-        st.sidebar.markdown('---')
-        st.sidebar.markdown(
-            """
-            **제작자**: 김찬영  
-            **Mail**: chykim1@gmail.com  
-            **Ver**: 1.0  
-            **Latest update**: 2026-02-20
-            """
-        )
+        render_sidebar_footer()
 
     raw_df_full = st.session_state.get('raw_monthly_df')
     
@@ -809,4 +804,3 @@ if st.session_state['page'] == 'selection':
     render_selection_screen()
 elif st.session_state['page'] == 'result':
     render_result_screen()
-
