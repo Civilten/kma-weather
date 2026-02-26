@@ -44,7 +44,33 @@ VAR_MAPPING = {
     'stn_ko': '지점명',
     'stn_id': '지점번호',
     'year': '연도',
-    'month': '월'
+    'month': '월',
+    'pa': '기압-평균현지',
+    'ps': '기압-평균해면',
+    'avgtgmin': '평균최저초상온도',
+    'ta': '기온-평년차',
+    'tmmax': '기온-최고-나타난 날',
+    'tmmin': '기온-최저-나타난 날',
+    'maxcnt': '기온-계급일수-최고',
+    'mincnt': '기온-계급일수-최저',
+    'avgte05': '평균지중온도',
+    'tm_rn_day': '1일 최다 강수량이 나타난날',
+    'rn_day_cnt1': '강수량 계급일수(>=0.1mm)',
+    'rn_day_cnt2': '강수량 계급일수(>=1.0mm)',
+    'rn_day_cnt3': '강수량 계급일수(>=10.0mm)',
+    'rn_day_cnt4': '강수량 계급일수(>=30.0mm)',
+    'ev_s': '증발량(mm)',
+    'wd_max': '최대풍향(16방위)',
+    'tm_max': '최대 풍속이 나타난 날',
+    'cnt1': '현상일수(운량,<2.5)',
+    'cnt2': '현상일수(운량,>=7.5)',
+    'cnt3': '현상일수(부조)',
+    'cnt4': '현상일수(안개)',
+    'cnt5': '현상일수(폭풍)',
+    'cnt6': '현상일수(낙뢰)',
+    'cnt7': '현상일수(눈)',
+    'cnt8': '현상일수(서리)',
+    'cnt9': '현상일수(결빙)'
 }
 
 # --- State Management ---
@@ -225,7 +251,7 @@ def render_selection_screen():
             """
             **제작자**: 김찬영  
             **Mail**: chykim1@gmail.com  
-            **Ver**: 1.0  
+            **Ver**: 1.0.1  
             **Latest update**: 2026-02-20
             """
         )
@@ -555,17 +581,15 @@ def render_result_screen():
     final_selected_cols = [grouping_col] + selected_api_cols
     rename_dict = {c: VAR_MAPPING.get(c, c) for c in final_selected_cols}
     
-    # Excel Generation (Top)
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+    # --- Excel Generation & Downloads ---
+    # 1. Aggregated Data Buffer
+    agg_buffer = io.BytesIO()
+    with pd.ExcelWriter(agg_buffer, engine='openpyxl') as writer:
         unique_stns_export = master_df['stn_id'].unique()
         for stn_id in unique_stns_export:
             stn_sub_df = master_df[master_df['stn_id'] == stn_id].copy()
-            
             if grouping_col in stn_sub_df.columns:
                 stn_sub_df.sort_values(grouping_col, inplace=True)
-            
-            # Ensure we only pick cols that exist in df
             cols_to_use = [x for x in final_selected_cols if x in stn_sub_df.columns]
             sheet_df = stn_sub_df[cols_to_use].rename(columns=rename_dict)
             
@@ -573,14 +597,58 @@ def render_result_screen():
             safe_sheet_name = "".join([c for c in stn_name if c.isalnum() or c in (' ', '_', '-')])[:30]
             sheet_df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
             
-    st.download_button(
-        label="💾 엑셀 다운로드",
-        data=buffer.getvalue(),
-        file_name=f"weather_summary_export.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        type="primary",
-        use_container_width=True
-    )
+    # 2. Raw Data Buffer
+    raw_buffer = io.BytesIO()
+    with pd.ExcelWriter(raw_buffer, engine='openpyxl') as writer:
+        unique_stns_raw = raw_df['stn_id'].unique()
+        for stn_id in unique_stns_raw:
+            stn_raw_sub_df = raw_df[raw_df['stn_id'] == stn_id].copy()
+            # Sort chronologically
+            if 'time_val' in stn_raw_sub_df.columns:
+                stn_raw_sub_df.sort_values('time_val', inplace=True)
+                
+            # Pick all available columns, ensuring year and month are at the very front
+            all_cols = list(stn_raw_sub_df.columns)
+            
+            # Explicitly drop requested columns
+            cols_to_drop = ['year', 'month', 'time_val', 'info', 'stn_ko', 'stnko']
+            for d_col in cols_to_drop:
+                if d_col in all_cols:
+                    all_cols.remove(d_col)
+            
+            raw_cols = ['year', 'month'] + all_cols
+            raw_rename_dict = {c: VAR_MAPPING.get(c, c) for c in raw_cols}
+            
+            raw_sheet_df = stn_raw_sub_df[raw_cols].rename(columns=raw_rename_dict)
+            stn_name = stn_map.get(str(stn_id), str(stn_id))
+            safe_sheet_name = "".join([c for c in stn_name if c.isalnum() or c in (' ', '_', '-')])[:30]
+            
+            # Write to excel
+            raw_sheet_df.to_excel(writer, sheet_name=safe_sheet_name, index=False)
+            
+    # Draw Dual Download Buttons
+    # Adding a container and columns for better UI aesthetics
+    with st.container():
+        st.markdown("<br>", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(
+                label="� 결과(통계) 데이터 다운로드 (.xlsx)",
+                data=agg_buffer.getvalue(),
+                file_name=f"weather_summary_aggregated.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="primary",
+                use_container_width=True
+            )
+        with col2:
+            st.download_button(
+                label="📥 원본 수집 데이터 다운로드 (.xlsx)",
+                data=raw_buffer.getvalue(),
+                file_name=f"weather_raw_data.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                type="secondary",
+                use_container_width=True
+            )
     
     # Per-Channel Table Display & Dynamic Charts
     unique_stns = master_df['stn_id'].unique()
